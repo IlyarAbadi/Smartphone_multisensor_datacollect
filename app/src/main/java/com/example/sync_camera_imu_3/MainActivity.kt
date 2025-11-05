@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     companion object {
         private const val REQUEST_CODE_CAMERA = 100
-        private const val FRAME_SAVE_INTERVAL = 1  // Save every 10th frame
+        private const val FRAME_SAVE_INTERVAL = 1  // Save every 3th frame
     }
 
     private var frameCount = 0
@@ -86,6 +86,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         findViewById<FloatingActionButton>(R.id.fab_stop).setOnClickListener {
             if (isRecording) stopRecording()
+        }
+
+        findViewById<FloatingActionButton>(R.id.fab_capture_only).setOnClickListener {
+            captureSingleImage()
         }
     }
 
@@ -147,6 +151,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 android.hardware.camera2.CaptureRequest.LENS_FOCUS_DISTANCE,
                 desiredFocusDistance
             )
+            camera2Extender.setCaptureRequestOption(
+                android.hardware.camera2.CaptureRequest.CONTROL_AE_MODE,
+                android.hardware.camera2.CaptureRequest.CONTROL_AE_MODE_OFF
+            )
+            camera2Extender.setCaptureRequestOption(
+                android.hardware.camera2.CaptureRequest.SENSOR_EXPOSURE_TIME,
+                1_700_000L//
+            )
+            camera2Extender.setCaptureRequestOption(
+                android.hardware.camera2.CaptureRequest.SENSOR_SENSITIVITY,
+                2000  // ISO 200
+            )
 
             analysisUseCase = builder.build()
 
@@ -201,7 +217,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         val yuvImage = YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
         val out = ByteArrayOutputStream()
-        yuvImage.compressToJpeg(android.graphics.Rect(0, 0, image.width, image.height), 80, out)
+        yuvImage.compressToJpeg(android.graphics.Rect(0, 0, image.width, image.height), 90, out)
         return out.toByteArray()
     }
 
@@ -217,7 +233,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
             imuBuffer.append("$timestamp,$type,${it.values[0]},${it.values[1]},${it.values[2]}\n")
 
-            if (imuBuffer.length > 5000) {
+            if (imuBuffer.length > 500) {
                 sensorFile.append(imuBuffer.toString())
                 imuBuffer.clear()
             }
@@ -267,4 +283,32 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             Toast.makeText(this, "Camera permission denied", Toast.LENGTH_LONG).show()
         }
     }
+
+    private fun captureSingleImage() {
+        val timestamp = System.currentTimeMillis()
+
+        // Use the same ImageAnalysis stream settings (YUV frames)
+        analysisUseCase.setAnalyzer(analysisExecutor) { imageProxy ->
+            try {
+                val jpegBytes = yuvToJpegBytes(imageProxy)
+                val file = File(getExternalFilesDir("SingleShots"), "single_${timestamp}.jpg")
+                FileOutputStream(file).use { it.write(jpegBytes) }
+
+                Log.d("Camera", "Saved single image: ${file.absolutePath}")
+                runOnUiThread {
+                    Toast.makeText(this, "Captured single image", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                imageProxy.close()
+            }
+        }
+
+        // Schedule analyzer to stop after one frame (so it doesn’t keep running)
+        Handler(Looper.getMainLooper()).postDelayed({
+            analysisUseCase.clearAnalyzer()
+        }, 300) // small delay to allow one frame to process
+    }
+
 }
