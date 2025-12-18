@@ -31,27 +31,66 @@
         android:layout_marginTop="?attr/actionBarSize"
         android:layout_gravity="top" />
 
-    <!-- Start FAB -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab"
+    <LinearLayout
+        android:id="@+id/imu_cam_grp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="96dp"
-        app:srcCompat="@android:drawable/ic_media_play"
-        android:contentDescription="Start Capture" />
+        android:layout_marginBottom="6dp"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:background="@drawable/fab_group_bg2"
+        android:elevation="6dp">
 
-    <!-- Stop FAB -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_stop"
+        <!-- Start FAB -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:srcCompat="@android:drawable/ic_media_play"
+            android:contentDescription="Start Capture" />
+
+        <!-- Stop FAB -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab_stop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:srcCompat="@android:drawable/ic_media_pause"
+            android:contentDescription="Stop Capture" />
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:id="@+id/imu_group"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
-        app:srcCompat="@android:drawable/ic_media_pause"
-        android:contentDescription="Stop Capture" />
+        android:layout_marginBottom="176dp"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:background="@drawable/fab_group_bg"
+        android:elevation="6dp">
+
+        <!-- IMU calibrate data capture  -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/just_imu_calibrate_start"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:srcCompat="@android:drawable/ic_menu_directions"
+            android:contentDescription="IMU data calibration started" />
+
+        <!-- IMU calibrate data capture  -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/just_imu_calibrate_stop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:contentDescription="IMU data calibration stopped" />
+
+    </LinearLayout>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_capture_only"

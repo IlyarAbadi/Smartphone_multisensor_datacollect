@@ -18,7 +18,9 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.Sync_camera_imu_3">
+            android:theme="@style/Theme.Sync_camera_imu_3"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="fullSensor" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

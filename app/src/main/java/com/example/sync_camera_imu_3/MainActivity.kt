@@ -3,6 +3,7 @@ package com.example.sync_camera_imu_3
 import android.Manifest
 import android.content.ContentValues
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.ImageFormat
 import android.graphics.YuvImage
 import android.hardware.Sensor
@@ -46,6 +47,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private val imuBuffer = StringBuilder()
 
     private var isRecording = false
+    private var isImuOnlyRecording = false
+
     private lateinit var analysisUseCase: ImageAnalysis
     private val analysisExecutor = Executors.newSingleThreadExecutor()
 
@@ -55,6 +58,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         private const val REQUEST_CODE_CAMERA = 100
         private const val FRAME_SAVE_INTERVAL = 1  // Save every 3th frame
     }
+
+    enum class RecordingMode {
+        NONE,
+        IMU_ONLY,
+        IMU_CAMERA
+    }
+
+    private var recordingMode = RecordingMode.NONE
 
     private var frameCount = 0
 
@@ -81,16 +92,56 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
         findViewById<FloatingActionButton>(R.id.fab).setOnClickListener {
+            recordingMode = RecordingMode.IMU_CAMERA
             if (!isRecording) startRecording()
         }
 
         findViewById<FloatingActionButton>(R.id.fab_stop).setOnClickListener {
+            recordingMode = RecordingMode.NONE
             if (isRecording) stopRecording()
+        }
+
+        findViewById<FloatingActionButton>(R.id.just_imu_calibrate_start).setOnClickListener {
+            recordingMode = RecordingMode.IMU_ONLY
+            startRecordingIMU()
+        }
+
+        findViewById<FloatingActionButton>(R.id.just_imu_calibrate_stop).setOnClickListener {
+            recordingMode = RecordingMode.NONE
+            stopRecordingIMU()
         }
 
         findViewById<FloatingActionButton>(R.id.fab_capture_only).setOnClickListener {
             captureSingleImage()
         }
+    }
+
+
+    private fun startRecordingIMU() {
+        isImuOnlyRecording = true
+        isRecording = false
+        frameCount = 0
+        sensorFile = FileWriter(sensorCsvFile, true)
+        sensorFile.append("Timestamp,Sensor,X,Y,Z\n")
+        accelerometer?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+        gyroscope?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+        magnetometer?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+        Toast.makeText(this, "IMU only recording started", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun stopRecordingIMU() {
+        isImuOnlyRecording = false
+        sensorManager.unregisterListener(this)
+        if (::sensorFile.isInitialized) {
+            if (imuBuffer.isNotEmpty()) {
+                sensorFile.append(imuBuffer.toString())
+                imuBuffer.clear()
+            }
+            sensorFile.flush()
+            sensorFile.close()
+            saveSensorCsvToDocuments("sensor_data_calibration.csv", sensorCsvFile.readText())
+        }
+        Toast.makeText(this, "IMU only recording stopped", Toast.LENGTH_SHORT).show()
     }
 
     private fun startRecording() {
@@ -222,25 +273,61 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        event?.let {
-            if (!isRecording) return
-            val timestamp = System.currentTimeMillis()
-            val type = when (it.sensor.type) {
-                Sensor.TYPE_ACCELEROMETER -> "Accelerometer"
-                Sensor.TYPE_GYROSCOPE -> "Gyroscope"
-                Sensor.TYPE_MAGNETIC_FIELD -> "Magnetometer"
-                else -> "Unknown"
-            }
-            imuBuffer.append("$timestamp,$type,${it.values[0]},${it.values[1]},${it.values[2]}\n")
+        event ?: return
 
-            if (imuBuffer.length > 500) {
-                sensorFile.append(imuBuffer.toString())
-                imuBuffer.clear()
-            }
+        if (!isRecording && !isImuOnlyRecording) return
+
+        val timestamp = System.currentTimeMillis()
+        val type = when (event.sensor.type) {
+            Sensor.TYPE_ACCELEROMETER -> "Accelerometer"
+            Sensor.TYPE_GYROSCOPE -> "Gyroscope"
+            Sensor.TYPE_MAGNETIC_FIELD -> "Magnetometer"
+            else -> return
+        }
+
+        imuBuffer.append(
+            "$timestamp,$type,${event.values[0]},${event.values[1]},${event.values[2]}\n"
+        )
+
+        if (imuBuffer.length > 500) {
+            sensorFile.append(imuBuffer.toString())
+            imuBuffer.clear()
         }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+
+        when (recordingMode) {
+
+            RecordingMode.IMU_ONLY -> {
+                // ✅ Do nothing
+                // Sensors continue
+                // Files stay open
+                Log.d("Lifecycle", "Rotation ignored in IMU-only mode")
+            }
+
+            RecordingMode.IMU_CAMERA -> {
+                // ❌ Camera + IMU should restart cleanly
+                Log.d("Lifecycle", "Rotation detected in IMU+Camera mode, restarting activity")
+
+                // Graceful shutdown
+                stopRecording()
+
+                // Explicitly destroy activity
+                finish()
+
+                // Optional: clean restart
+                startActivity(intent)
+            }
+
+            RecordingMode.NONE -> {
+                // Normal behavior: just recreate UI if you want
+            }
+        }
+    }
 
     override fun onDestroy() {
         super.onDestroy()
