@@ -21,6 +21,8 @@ A screenshot of the developed App is shown below:
 
 <img src="/assets/Phone_screenshot.png" alt="Alt text" width="200"/>
 
+# Introduction and Application
+A fixed focal length is important in camera-based 3D indoor and outdoor reconstruction, mapping, and localization. Mobile phones typically use autofocus by default, which rapidly adjusts the focal length based on the estimated distance between the object and the camera; however, changes in focal length alter the camera intrinsic calibration parameters, thereby influencing 3D point triangulation and ultimately degrading reconstruction and mapping accuracy. For such engineering applications, a fixed focal length is therefore essential. The developed application provides this capability and additionally records time-synchronized triaxial accelerometer, gyroscope, and magnetometer data alongside the captured images.
 
 # How to change FF, Exposure time, and Sensor Sensitivity.
 
